@@ -45,10 +45,13 @@ void loop ()
     if (topic == subscribe_topics [0])
     {
         lock_status = msg_doc["status"].as<String>();
-        if(lock_status == "off")
+        if(lock_status == "off"){
             led2_interval = 1000000;
             digitalWrite(leds [1], LOW);
             digitalWrite(leds [0], LOW);
+        }
+        else if (lock_status == "on")
+            digitalWrite(leds [1], HIGH);
 
     }
     else if (topic == subscribe_topics [1])
@@ -62,7 +65,6 @@ void loop ()
             led2_interval = 500;
         else {
             led2_interval = 1000000;
-            digitalWrite(leds [1], LOW);
             digitalWrite(leds [0], LOW);
         }
     }
@@ -79,7 +81,6 @@ void loop ()
             led2_state = HIGH;
         else
             led2_state = LOW;
-            digitalWrite(leds [1], led2_state);
             digitalWrite(leds [0], led2_state);
         }
     mqtt_client.reset_msg ();
