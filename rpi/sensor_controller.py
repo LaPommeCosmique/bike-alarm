@@ -8,10 +8,10 @@ import logging
 logging.basicConfig(format="%(asctime)s | %(name)s | %(levelname)s | %(message)s", level=logging.INFO)
 
 ## AMQP CONNECTION PARAMETERS
-ip_rabbit = "<rabbitmq ip address>"
+ip_rabbit = "172.20.10.5"
 port_rabbit = 30672
-user_rabbit = "<rabbitmq username>"
-pass_rabbit = "<rabbitmq password>"
+user_rabbit = "user"
+pass_rabbit = "password"
 
 ## AMQP PUBLISHER EXCHANGES
 ex_rabbit = "amq.topic"
@@ -31,11 +31,11 @@ amqp_client.create_queue(amqp_ch, ex_rabbit, rkey_rabbit_compromised_status, que
 amqp_client.create_queue(amqp_ch, ex_rabbit, rkey_rabbit_compromised_status, queue_rabbit_compromised_status)
 
 ## MQTT CONNECTION
-ip_mosquitto = "localhost"
+ip_mosquitto = "172.20.10.3"
 
 ## MQTT TOPICS
-topic_accel = "accel_topic" # accelerometer
-topic_circuit = "circuit_topic" # movement (reed, wire)
+topic_accel = "imu_topic" # accelerometer
+topic_circuit = "lock_topic" # movement (reed, wire)
 topic_lock_status = "lock_status_topic" # maybe
 topics_mosquitto = [
     (topic_accel, 1),
@@ -54,23 +54,27 @@ tamper_status = False
 compromised_status = False
 lock_status = True
 
-accel_threshold = 0.5
+accel_mag_prev = None;
+
+accel_threshold = 0.05
 def handle_accel_message(msg):
     global tamper_status
-    if lock_status and not tamper_status and not compromised_status:
+    global accel_mag_prev
+    if not compromised_status:
         # check if acceleration exceeds a threshold
-        x_accel = msg['x_accel']
-        y_accel = msg['y_accel']
-        z_accel = msg['z_accel']
+        x_accel = msg['acc_x']
+        y_accel = msg['acc_y']
+        z_accel = msg['acc_z']
         accel_mag = (x_accel**2+y_accel**2+z_accel**2)**0.5
-        if accel_mag  > accel_threshold:
+        if accel_mag_prev is not None and (abs(accel_mag-accel_mag_prev)) > accel_mag_prev*accel_threshold:
             tamper_status = True
             amqp_ch.basic_publish(ex_rabbit, rkey_rabbit_tamper_status, json.dumps({"tamper": True, "mag": accel_mag}))
+        accel_mag_prev = accel_mag
 
 def handle_circuit_message(msg):
     global compromised_status
     if lock_status and not compromised_status:
-        if msg["circuit"] == False:
+        if msg["lock_state"] == False:
             compromised_status = True
             amqp_ch.basic_publish(ex_rabbit, rkey_rabbit_compromised_status, json.dumps({"compromised": True}))
 
