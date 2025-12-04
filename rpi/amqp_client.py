@@ -21,7 +21,7 @@ def on_message(channel, method, properties, msg):
 	logging.debug("AMQP - Message received: " + msg.decode("utf-8"))
 
 def subscribe(channel, queue, on_message_callback):
-	channel.basic_consume(queue, on_message_callback=on_message_callback)
+	channel.basic_consume(queue, on_message_callback=on_message_callback, auto_ack=True)
 	logging.info("AMQP - Subscribed to: " + queue)
 
 
